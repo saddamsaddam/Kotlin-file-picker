@@ -9,7 +9,7 @@ class DatabaseHelper(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
-        private const val DATABASE_NAME = "mydatabase3.db"
+        private const val DATABASE_NAME = "mydatabase5.db"
         private const val DATABASE_VERSION = 1
     }
 
@@ -18,6 +18,9 @@ class DatabaseHelper(context: Context) :
         try {
             // Create your database tables here
             db.execSQL("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)")
+
+            // Create the new table with "name" and "file" columns
+            db.execSQL("CREATE TABLE IF NOT EXISTS filetable (id INTEGER PRIMARY KEY, name TEXT, file BLOB)")
         } catch (e: Exception) {
             // Log any exceptions that occur during table creation
             Log.e("DatabaseHelper", "Error creating table: ${e.message}")
@@ -29,28 +32,40 @@ class DatabaseHelper(context: Context) :
     }
 
     // Function to insert a new user into the "users" table
-    fun insertUser(name: String) {
+    fun insertUser(name: String, fileData: ByteArray) {
         val db = writableDatabase
 
         val values = ContentValues()
         values.put("name", name)
+        values.put("file", fileData)
 
-        // Insert the data into the "users" table
-        db.insert("users", null, values)
+        // Insert the data into the "filetable"
+        db.insert("filetable", null, values)
 
         // Close the database connection
         db.close()
     }
+    fun getAllDataFromFileTable(): List<Pair<String, ByteArray>> {
+        val db = readableDatabase
+        val data = mutableListOf<Pair<String, ByteArray>>()
+
+        val query = "SELECT name, file FROM filetable"
+        val cursor = db.rawQuery(query, null)
+
+        while (cursor.moveToNext()) {
+            val name = cursor.getString(cursor.getColumnIndex("name"))
+            val fileData = cursor.getBlob(cursor.getColumnIndex("file"))
+
+            data.add(Pair(name, fileData))
+        }
+
+        cursor.close()
+        db.close()
+
+        return data
+    }
 }
 
-// Example of how to use the DatabaseHelper to insert a user
-fun insertUserData(context: Context, userName: String) {
-    val dbHelper = DatabaseHelper(context)
-
-    // Insert a new user into the "users" table
-    dbHelper.insertUser(userName)
-}
-// Function to check if a table exists in the database
 fun isTableExists(context: Context, tableName: String): Boolean {
     val dbHelper = DatabaseHelper(context) // Replace with your database helper class
     val db: SQLiteDatabase = dbHelper.readableDatabase
@@ -83,6 +98,8 @@ fun getAllUserNames(context: Context): List<String> {
 
     return userNames
 }
+// Function to fetch all data (name and file) from the "filetable" table
+
 
 // Example of how to use the DatabaseHelper to create the database and insert data
 
