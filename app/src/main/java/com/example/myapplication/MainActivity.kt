@@ -1,10 +1,13 @@
 package com.example.myapplication
 import DatabaseHelper
 import android.content.Context
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +28,7 @@ import insertUserData
 import isTableExists
 
 class MainActivity : ComponentActivity() {
+    var link=""
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -47,8 +51,16 @@ fun SignUpForm() {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-
+    var selectedFileUri by remember { mutableStateOf<Uri?>(null) } // Variable to store the selected file URI
     val context = LocalContext.current
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri ->
+            // Do something with the file UR
+            selectedFileUri = uri
+            showToast(context, selectedFileUri.toString())
+        }
+    )
 
     Column(
         modifier = Modifier
@@ -87,18 +99,29 @@ fun SignUpForm() {
 
         Button(
             onClick = {
+
+                filePickerLauncher.launch(arrayOf("image/*"))
+
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+        ) {
+            Text(text = "Select File", color = Color.White)
+        }
+        Button(
+            onClick = {
                 val dbHelper = DatabaseHelper(context)
                 val tableName = "users"
                 if (isTableExists(context, tableName)) {
 
                     insertUserData(context, "John Doe")
                     val userNames = getAllUserNames(context)
-                    showToast(context,userNames.toString())
+                   // showToast(context,userNames.toString())
                 } else {
-                    showToast(context,"False")
+                   // showToast(context,"False")
                 }
-
-
+                showToast(context, selectedFileUri.toString())
 
                 // Create the database (if it doesn't exist) and insert data
                 //insertUserData(context, "Jane Smith")
@@ -113,6 +136,7 @@ fun SignUpForm() {
     }
 
 }
+
 
 fun showToast(context: Context, message: String) {
     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
