@@ -3,6 +3,7 @@ import DatabaseHelper
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -23,9 +24,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.theme.MyApplicationTheme
-import getAllUserNames
-import insertUserData
 import isTableExists
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : ComponentActivity() {
     var link=""
@@ -52,6 +53,7 @@ fun SignUpForm() {
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) } // Variable to store the selected file URI
+    var fileByteArray by remember { mutableStateOf<ByteArray?>(null) } // Variable to store the file content as ByteArray
     val context = LocalContext.current
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -59,6 +61,9 @@ fun SignUpForm() {
             // Do something with the file UR
             selectedFileUri = uri
             showToast(context, selectedFileUri.toString())
+            // Convert the selected file to ByteArray
+            // Convert the selected file to ByteArray and store it in fileByteArray
+            fileByteArray = uri?.let { context.contentResolver.openInputStream(it)?.readBytes() }
         }
     )
 
@@ -112,19 +117,25 @@ fun SignUpForm() {
         Button(
             onClick = {
                 val dbHelper = DatabaseHelper(context)
-                val tableName = "users"
-                if (isTableExists(context, tableName)) {
+                if (isTableExists(context, "filetable")) {
+                    if (selectedFileUri != null && fileByteArray != null) {
+                        // Now you can use the fileByteArray as needed
+                        val name = email
+                        val byteArray = fileByteArray!! // Non-null assertion (you should handle nullability appropriately)
+                        // Use name and byteArray for further processing or storage
+                        dbHelper.insertUser(name,byteArray)
 
-                    insertUserData(context, "John Doe")
-                    val userNames = getAllUserNames(context)
-                   // showToast(context,userNames.toString())
+                        showToast(context, "Selected File: $selectedFileUri, ByteArray Size: ${byteArray.size}")
+                    } else {
+                        showToast(context, "No file selected")
+                    }
                 } else {
-                   // showToast(context,"False")
+                    showToast(context,"Table not exist")
                 }
-                showToast(context, selectedFileUri.toString())
 
-                // Create the database (if it doesn't exist) and insert data
-                //insertUserData(context, "Jane Smith")
+
+
+
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -132,11 +143,62 @@ fun SignUpForm() {
         ) {
             Text(text = "Sign Up", color = Color.White)
         }
+        Button(
+            onClick = {
+                val dbHelper = DatabaseHelper(context)
+                if (isTableExists(context, "filetable")) {
 
+                    val dataList = dbHelper.getAllDataFromFileTable()
+
+                    for ((name, fileData) in dataList) {
+                        // Process the name and fileData as needed
+                        val uri = saveFileDataAsImage(context, name + ".jpg", fileData)
+
+                        if (uri != null) {
+                            showToast(context, "Image saved to: $uri")
+                            println("Image saved to: $uri")
+                        } else {
+                            showToast(context, "Failed to save image")
+                        }
+                        //showToast(context, "Name: $name, File Data Size: ${fileData.size}")
+                    }
+                    // showToast(context,userNames.toString())
+                } else {
+                    showToast(context,"Table not exist")
+                }
+
+
+
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+        ) {
+            Text(text = "Show File", color = Color.White)
+        }
     }
 
 }
 
+fun saveFileDataAsImage(context: Context, fileName: String, fileData: ByteArray): Uri? {
+    val imagesDirectory = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "YourDirectoryName")
+
+    if (!imagesDirectory.exists()) {
+        imagesDirectory.mkdirs()
+    }
+
+    val imageFile = File(imagesDirectory, fileName)
+
+    return try {
+        val fos = FileOutputStream(imageFile)
+        fos.write(fileData)
+        fos.close()
+        Uri.fromFile(imageFile)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
 
 fun showToast(context: Context, message: String) {
     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
