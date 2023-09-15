@@ -62,7 +62,6 @@ fun SendEmailActivity() {
     var subject by remember { mutableStateOf(TextFieldValue("sre")) }
     var body by remember { mutableStateOf(TextFieldValue("hhul")) }
     var isLoading by remember { mutableStateOf(false) }
-    //sendEmailWithAttachment("sohojitofficial@gmail.com","ce18046@mbstu.ac.bd","ixqveomlojfjyivh","saddamnvn","$uri");
 
     Column(
         modifier = Modifier
